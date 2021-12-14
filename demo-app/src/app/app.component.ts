@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { MatSliderChange } from '@angular/material/slider';
-import { ColDef, GridOptions, LineSparklineOptions, RowNode } from 'ag-grid-community';
+import { ColDef, GridOptions, LineSparklineOptions, RangeSelectionChangedEvent, RowNode } from 'ag-grid-community';
 import { tap } from 'rxjs';
 import { getData } from './data';
 import { VolumeRendererComponent } from './volume-renderer/volume-renderer.component';
@@ -23,10 +23,9 @@ export class AppComponent {
       resizable: true,
     },
     rowData: getData(),
-    getRowNodeId: (data: any) => {
-      return data.symbol;
-    },
+    getRowNodeId: (data: any) => data.symbol,
     enableCellChangeFlash: true,
+    cellFlashDelay: 10,
     rowHeight: 75
   }
 
@@ -35,8 +34,12 @@ export class AppComponent {
       field: 'symbol',
       maxWidth: 150
     },
+    { field: 'name' },
     {
-      field: 'name',
+      field: 'volume',
+      headerName: 'Volume Renderer',
+      cellRendererFramework: VolumeRendererComponent,
+      maxWidth: 240,
     },
     {
       field: 'change',
@@ -45,20 +48,13 @@ export class AppComponent {
         sparklineOptions: {
           type: 'line',
           line: {
-            stroke: 'rgb(124, 255, 178)',
-            strokeWidth: 2,
+            strokeWidth: 4,
           },
           highlightStyle: { size: 10 },
           // cast to give type checking to params
         } as LineSparklineOptions,
       },
-    },
-    {
-      field: 'volume',
-      headerName: 'Volume Renderer',
-      cellRendererFramework: VolumeRendererComponent,
-      maxWidth: 240,
-    },
+    }
   ];
 
   private setupVolumeChanges() {
@@ -68,8 +64,12 @@ export class AppComponent {
         update: [{ ...toUpdate, volume: update.volume, change: [...(toUpdate.change.slice(1)), update.volume] }]
       });
     })).subscribe();
+    this.volumeService.setLimit(50000);
+    this.gridOptions.api?.refreshCells();
+
   }
   onSliderChange(e: MatSliderChange) {
     this.volumeService.setLimit(e.value || 0);
+    this.gridOptions.api?.refreshCells();
   }
 }
